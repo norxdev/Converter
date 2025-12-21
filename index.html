@@ -1,47 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Converter</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>Converter</h1>
-    <p>Upload a file to convert it</p>
-  </header>
 
-  <main>
-    <section id="upload-section">
-      <form id="upload-form">
-        <input type="file" id="file-input" required />
-        <select id="conversion-type">
-          <option value="">Select a file first</option>
-        </select>
-        <button type="submit">Convert</button>
-      </form>
-    </section>
+<header>
+  <h1>Converter</h1>
+  <p>Upload a file and convert it (demo)</p>
+</header>
 
-    <section id="result-section">
-      <div id="result"></div>
-    </section>
-  </main>
+<main>
+  <form id="upload-form">
+    <input type="file" id="file-input" required />
+    <select id="conversion-type">
+      <option value="">Select file first</option>
+    </select>
+    <button type="submit">Convert</button>
+  </form>
 
-  <!-- Processing Modal -->
-  <div id="processing-modal" class="modal">
-    <div class="modal-content">
-      <p>Processing your file...</p>
-      <div class="spinner"></div>
-      <div id="ad-space">
-        <p>Ad goes here</p>
-      </div>
-    </div>
+  <div id="result"></div>
+</main>
+
+<!-- Processing Modal -->
+<div id="processing-modal" class="modal hidden">
+  <div class="modal-content">
+    <p>Processing your file…</p>
+    <div class="spinner"></div>
   </div>
+</div>
 
-  <footer>
-    <p>&copy; 2025 Converter. All rights reserved.</p>
-  </footer>
+<footer>
+  <p>&copy; 2025 Converter</p>
+</footer>
+
 </body>
 </html>
