@@ -1,82 +1,77 @@
-document.addEventListener("DOMContentLoaded", () => {
+const conversionMap = {
+  'pdf': ['docx', 'txt'],
+  'docx': ['pdf', 'txt'],
+  'txt': ['pdf', 'docx']
+};
 
-  // Map of supported file types and their valid conversions
-  const conversionMap = {
-    'pdf': ['docx', 'txt'],
-    'docx': ['pdf', 'txt'],
-    'txt': ['pdf', 'docx']
-  };
+const fileInput = document.getElementById("file-input");
+const conversionType = document.getElementById("conversion-type");
+const resultDiv = document.getElementById("result");
+const modal = document.getElementById("processing-modal");
 
-  const fileInput = document.getElementById("file-input");
-  const conversionType = document.getElementById("conversion-type");
-  const resultDiv = document.getElementById("result");
+// Update conversion options dynamically
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  conversionType.innerHTML = '';
 
-  // Update conversion options dynamically when a file is selected
-  fileInput.addEventListener("change", () => {
-    const file = fileInput.files[0];
-    if (!file) return;
+  if (conversionMap[ext]) {
+    conversionMap[ext].forEach(target => {
+      const option = document.createElement('option');
+      option.value = `${ext}-to-${target}`;
+      option.textContent = `${ext.toUpperCase()} → ${target.toUpperCase()}`;
+      conversionType.appendChild(option);
+    });
+  } else {
+    conversionType.innerHTML = '<option value="">Unsupported file type</option>';
+  }
+});
 
-    const ext = file.name.split('.').pop().toLowerCase();
-    conversionType.innerHTML = '';
+// Handle form submission
+document.getElementById("upload-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    if (conversionMap[ext]) {
-      conversionMap[ext].forEach(target => {
-        const option = document.createElement('option');
-        option.value = `${ext}-to-${target}`;
-        option.textContent = `${ext.toUpperCase()} → ${target.toUpperCase()}`;
-        conversionType.appendChild(option);
-      });
-    } else {
-      conversionType.innerHTML = '<option value="">Unsupported file type</option>';
-    }
-  });
+  const file = fileInput.files[0];
+  const conversion = conversionType.value;
 
-  // Handle form submission
-  document.getElementById("upload-form").addEventListener("submit", (e) => {
-    e.preventDefault();
+  if (!file) {
+    resultDiv.textContent = "Please select a file!";
+    return;
+  }
+  if (!conversion) {
+    resultDiv.textContent = "Unsupported file type!";
+    return;
+  }
 
-    const file = fileInput.files[0];
-    const conversion = conversionType.value;
+  // Show processing modal
+  modal.style.display = "block";
 
-    if (!file) {
-      resultDiv.textContent = "Please select a file!";
-      return;
-    }
-    if (!conversion) {
-      resultDiv.textContent = "Unsupported file type!";
-      return;
-    }
+  // Send file to backend
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('conversion', conversion);
 
-    // Show converting message and spinner
-    resultDiv.innerHTML = `
-      <p>Converting "<strong>${file.name}</strong>" to ${conversion.split('-to-')[1].toUpperCase()}...</p>
-      <div class="spinner"></div>
-    `;
+  try {
+    const response = await fetch('/convert', {
+      method: 'POST',
+      body: formData
+    });
 
-    // Simulate conversion delay
-    setTimeout(() => {
-      const ext = conversion.split('-to-')[1];
+    if (!response.ok) throw new Error('Conversion failed');
 
-      // Show download button after "conversion"
-      resultDiv.innerHTML = `
-        File "<strong>${file.name}</strong>" converted (${conversion}).<br>
-        <button id="download-btn">Download Converted File</button>
-      `;
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `converted-file.${conversion.split('-to-')[1]}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
-      // Handle dummy download
-      document.getElementById("download-btn").addEventListener("click", () => {
-        const blob = new Blob([`This is a dummy converted ${ext} file.`], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `converted-file.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
-
-    }, 2000); // 2-second delay to show spinner
-  });
-
+  } catch (err) {
+    resultDiv.textContent = err.message;
+  } finally {
+    modal.style.display = "none";
+  }
 });
