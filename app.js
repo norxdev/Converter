@@ -1,5 +1,5 @@
 document.getElementById("upload-form").addEventListener("submit", function(e) {
-  e.preventDefault();
+  e.preventDefault(); 
 
   const fileInput = document.getElementById("file-input");
   const conversionType = document.getElementById("conversion-type").value;
