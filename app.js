@@ -1,34 +1,70 @@
+// Map of supported file types and their valid conversions
+const conversionMap = {
+  'pdf': ['docx', 'txt'],
+  'docx': ['pdf', 'txt'],
+  'txt': ['pdf', 'docx']
+};
+
+const fileInput = document.getElementById("file-input");
+const conversionType = document.getElementById("conversion-type");
+const resultDiv = document.getElementById("result");
+
+// Update conversion options dynamically when file is selected
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  // Detect file extension
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  // Clear previous options
+  conversionType.innerHTML = '';
+
+  if (conversionMap[ext]) {
+    conversionMap[ext].forEach(target => {
+      const option = document.createElement('option');
+      option.value = `${ext}-to-${target}`;
+      option.textContent = `${ext.toUpperCase()} → ${target.toUpperCase()}`;
+      conversionType.appendChild(option);
+    });
+  } else {
+    conversionType.innerHTML = '<option value="">Unsupported file type</option>';
+  }
+});
+
+// Handle form submission
 document.getElementById("upload-form").addEventListener("submit", function(e) {
-  e.preventDefault(); 
+  e.preventDefault();
 
-  const fileInput = document.getElementById("file-input");
-  const conversionType = document.getElementById("conversion-type").value;
-  const resultDiv = document.getElementById("result");
+  const file = fileInput.files[0];
+  const conversion = conversionType.value;
 
-  if (!fileInput.files.length) {
+  if (!file) {
     resultDiv.textContent = "Please select a file!";
     return;
   }
-
-  const file = fileInput.files[0];
+  if (!conversion) {
+    resultDiv.textContent = "Unsupported file type!";
+    return;
+  }
 
   // Show conversion message + dummy download button
   resultDiv.innerHTML = `
-    File "<strong>${file.name}</strong>" ready to convert (${conversionType}).<br>
+    File "<strong>${file.name}</strong>" ready to convert (${conversion}).<br>
     <button id="download-btn">Download Converted File</button>
   `;
 
   // Dummy file download
   document.getElementById("download-btn").addEventListener("click", () => {
-    const blob = new Blob(["This is a dummy converted file."], { type: "text/plain" });
+    const ext = conversion.split('-to-')[1];
+    const blob = new Blob([`This is a dummy converted ${ext} file.`], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "converted-file.txt";
+    a.download = `converted-file.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
 });
- 
