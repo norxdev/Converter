@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Converter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Converter</h1>
+    <p>Upload a file to convert it (demo version)</p>
+  </header>
+
+  <main>
+    <section id="upload-section">
+      <form id="upload-form">
+        <input type="file" id="file-input" required />
+        <select id="conversion-type">
+          <option value="pdf-to-docx">PDF → DOCX</option>
+          <option value="docx-to-pdf">DOCX → PDF</option>
+        </select>
+        <button type="submit">Convert</button>
+      </form>
+    </section>
+
+    <section id="result-section">
+      <div id="result"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Converter. All rights reserved.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
