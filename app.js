@@ -4,7 +4,7 @@ const conversionMap = {
   docx: ['txt']
 };
 
-const WORKER_URL = 'https://converter-worker.YOURNAME.workers.dev';
+const WORKER_URL = 'https://converter-worker.norxonics.workers.dev';
 
 const fileInput = document.getElementById('file-input');
 const conversionType = document.getElementById('conversion-type');
