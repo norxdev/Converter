@@ -48,23 +48,33 @@ document.getElementById("upload-form").addEventListener("submit", function(e) {
     return;
   }
 
-  // Show conversion message + dummy download button
+  // Show "Converting..." spinner/message
   resultDiv.innerHTML = `
-    File "<strong>${file.name}</strong>" ready to convert (${conversion}).<br>
-    <button id="download-btn">Download Converted File</button>
+    <p>Converting "<strong>${file.name}</strong>" to ${conversion.split('-to-')[1].toUpperCase()}...</p>
+    <div class="spinner"></div>
   `;
 
-  // Dummy file download
-  document.getElementById("download-btn").addEventListener("click", () => {
+  // Simulate conversion delay (2 seconds)
+  setTimeout(() => {
     const ext = conversion.split('-to-')[1];
-    const blob = new Blob([`This is a dummy converted ${ext} file.`], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `converted-file.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+
+    // Show download button after "conversion"
+    resultDiv.innerHTML = `
+      File "<strong>${file.name}</strong>" converted (${conversion}).<br>
+      <button id="download-btn">Download Converted File</button>
+    `;
+
+    // Dummy file download
+    document.getElementById("download-btn").addEventListener("click", () => {
+      const blob = new Blob([`This is a dummy converted ${ext} file.`], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `converted-file.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }, 2000); // 2 second delay
 });
