@@ -6,12 +6,13 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
-    // Preflight
+    // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: cors });
     }
 
     try {
+      // Only allow POST
       if (request.method !== "POST") {
         return new Response("Method Not Allowed", {
           status: 405,
@@ -38,6 +39,7 @@ export default {
         });
       }
 
+      // Enforce 10MB limit
       if (file.size > 10 * 1024 * 1024) {
         return new Response("File too large", {
           status: 413,
@@ -45,6 +47,20 @@ export default {
         });
       }
 
+      // ✅ TXT output: decode as UTF-8 text
+      if (target === "txt") {
+        const text = await file.text();
+
+        return new Response(text, {
+          headers: {
+            ...cors,
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Disposition": 'attachment; filename="converted.txt"',
+          },
+        });
+      }
+
+      // ✅ All other formats: return binary
       const buffer = await file.arrayBuffer();
 
       return new Response(buffer, {
@@ -56,7 +72,7 @@ export default {
       });
 
     } catch (err) {
-      return new Response("Worker crash", {
+      return new Response("Worker error", {
         status: 500,
         headers: cors,
       });
