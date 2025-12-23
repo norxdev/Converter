@@ -2,51 +2,84 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("upload-form");
   const fileInput = document.getElementById("file-input");
   const typeSelect = document.getElementById("conversion-type");
+  const convertButton = form.querySelector("button[type='submit']");
   const modal = document.getElementById("processing-modal");
   const modalStatus = document.getElementById("modal-status");
+
+  // Disable initially
+  typeSelect.disabled = true;
+  convertButton.disabled = true;
+
+  // File detection
+  fileInput.addEventListener("change", async () => {
+    if (!fileInput.files[0]) {
+      typeSelect.disabled = true;
+      convertButton.disabled = true;
+      return;
+    }
+
+    // Detect file type (basic)
+    const file = fileInput.files[0];
+    let options = [];
+
+    if (file.type === "text/plain") {
+      options = ["pdf", "docx"];
+    } else if (file.type === "application/pdf") {
+      options = ["txt", "jpg"];
+    } else if (
+      file.type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      options = ["pdf", "txt"];
+    } else {
+      options = ["pdf", "docx", "txt"];
+    }
+
+    // Populate dropdown
+    typeSelect.innerHTML = "";
+    options.forEach((opt) => {
+      const optionEl = document.createElement("option");
+      optionEl.value = opt;
+      optionEl.textContent = opt.toUpperCase();
+      typeSelect.appendChild(optionEl);
+    });
+
+    // Enable controls
+    typeSelect.disabled = false;
+    convertButton.disabled = false;
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!fileInput.files[0]) return;
 
-    const file = fileInput.files[0];
-    // Auto-detect file type
-    const ext = file.name.split(".").pop().toLowerCase();
-    typeSelect.innerHTML = "";
-
-    if (ext === "txt") {
-      typeSelect.innerHTML = `
-        <option value="txt-to-pdf">TXT → PDF</option>
-        <option value="txt-to-docx">TXT → DOCX</option>
-      `;
-    } else if (ext === "docx") {
-      typeSelect.innerHTML = `
-        <option value="docx-to-txt">DOCX → TXT</option>
-      `;
-    } else {
-      typeSelect.innerHTML = `<option value="">Unsupported file</option>`;
-    }
-
     modal.classList.remove("hidden");
     modalStatus.textContent = "Processing...";
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", fileInput.files[0]);
     formData.append("type", typeSelect.value);
 
     try {
-      const response = await fetch("https://converter-worker.norxonics.workers.dev", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "https://converter-worker.norxonics.workers.dev",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) throw new Error("Conversion failed");
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
       a.href = url;
-      a.download = file.name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value.split("-").pop();
+      a.download =
+        fileInput.files[0].name.replace(/\.[^/.]+$/, "") +
+        "." +
+        typeSelect.value;
       document.body.appendChild(a);
       a.click();
       a.remove();
