@@ -1,6 +1,7 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
-import mammoth from 'mammoth';
+// === CDN imports for Cloudflare Workers ===
+import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.19.0';
+import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@3.12.313/build/pdf.js';
+import mammoth from 'https://esm.sh/mammoth@1.4.2';
 
 // Worker entry
 export default {
@@ -106,7 +107,7 @@ async function pdfToPng(buffer) {
   const page = await pdf.getPage(1);
   const viewport = page.getViewport({ scale: 2 });
 
-  // Create a canvas
+  // OffscreenCanvas supported in Cloudflare Workers
   const canvas = new OffscreenCanvas(viewport.width, viewport.height);
   const context = canvas.getContext("2d");
 
