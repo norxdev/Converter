@@ -16,17 +16,14 @@
 
 <form id="upload-form">
   <input type="file" id="file-input" required>
-
   <select id="conversion-type">
-    <option value="">Select a file first</option>
+    <option value="pdf">PDF</option>
+    <option value="docx">DOCX</option>
   </select>
-
   <button type="submit">Convert</button>
 </form>
 
-<div id="result"></div>
-
-<div id="processing-modal">
+<div id="processing-modal" class="hidden">
   <div class="modal-box">
     <p id="modal-status">Processing...</p>
     <div class="ad-slot">Ad Placeholder</div>

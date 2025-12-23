@@ -1,102 +1,44 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("upload-form");
-  const fileInput = document.getElementById("file-input");
-  const conversionSelect = document.getElementById("conversion-type");
-  const resultEl = document.getElementById("result");
+const form = document.getElementById("upload-form");
+const fileInput = document.getElementById("file-input");
+const typeSelect = document.getElementById("conversion-type");
+const modal = document.getElementById("processing-modal");
+const modalStatus = document.getElementById("modal-status");
 
-  if (!form || !fileInput || !conversionSelect || !resultEl) {
-    console.error("Missing required DOM elements");
-    return;
-  }
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-  const conversionMap = {
-    txt: ["pdf"],
-    pdf: ["txt"],
-  };
+  if (!fileInput.files[0]) return;
 
-  function setResult(msg) {
-    if (resultEl) {
-      resultEl.textContent = msg;
-    }
-  }
+  modal.classList.remove("hidden");
+  modalStatus.textContent = "Processing...";
 
-  // Populate conversions when file is selected
-  fileInput.addEventListener("change", () => {
-    conversionSelect.innerHTML = "";
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  formData.append("type", typeSelect.value);
 
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    const ext = file.name.split(".").pop().toLowerCase();
-
-    if (!conversionMap[ext]) {
-      const opt = document.createElement("option");
-      opt.textContent = "Unsupported file type";
-      opt.value = "";
-      conversionSelect.appendChild(opt);
-      return;
-    }
-
-    conversionMap[ext].forEach((to) => {
-      const opt = document.createElement("option");
-      opt.value = `${ext}-to-${to}`;
-      opt.textContent = `${ext.toUpperCase()} → ${to.toUpperCase()}`;
-      conversionSelect.appendChild(opt);
+  try {
+    const response = await fetch("https://converter-worker.norxonics.workers.dev", {
+      method: "POST",
+      body: formData,
     });
-  });
 
-  // Handle submit
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    setResult("");
+    if (!response.ok) throw new Error("Conversion failed");
 
-    const file = fileInput.files[0];
-    const conversion = conversionSelect.value;
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
 
-    if (!file) {
-      setResult("Please select a file.");
-      return;
-    }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileInput.files[0].name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 
-    if (!conversion) {
-      setResult("Unsupported conversion.");
-      return;
-    }
-
-    const [from, to] = conversion.split("-to-");
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("from", from);
-    formData.append("to", to);
-
-    try {
-      setResult("Processing…");
-
-      const res = await fetch("https://converter-worker.norxonics.workers.dev/", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error("Conversion failed");
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `converted.${to}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      URL.revokeObjectURL(url);
-      setResult("Conversion complete!");
-    } catch (err) {
-      console.error(err);
-      setResult("Conversion failed.");
-    }
-  });
+    modalStatus.textContent = "Done!";
+    setTimeout(() => modal.classList.add("hidden"), 1000);
+  } catch (err) {
+    modalStatus.textContent = "Conversion failed: " + err.message;
+    setTimeout(() => modal.classList.add("hidden"), 2000);
+  }
 });
