@@ -16,9 +16,15 @@
 
 <form id="upload-form">
   <input type="file" id="file-input" required>
-  <select id="conversion-type"></select>
+
+  <select id="conversion-type">
+    <option value="">Select a file first</option>
+  </select>
+
   <button type="submit">Convert</button>
 </form>
+
+<div id="result"></div>
 
 <div id="processing-modal">
   <div class="modal-box">

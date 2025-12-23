@@ -1,50 +1,69 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("upload-form");
   const fileInput = document.getElementById("file-input");
-  const fromSelect = document.getElementById("from");
-  const toSelect = document.getElementById("to");
-  const statusEl = document.getElementById("result");
+  const conversionSelect = document.getElementById("conversion-type");
+  const resultEl = document.getElementById("result");
 
-  if (!form || !fileInput || !fromSelect || !toSelect || !statusEl) {
-    console.error("One or more required DOM elements are missing", {
-      form,
-      fileInput,
-      fromSelect,
-      toSelect,
-      statusEl
-    });
+  if (!form || !fileInput || !conversionSelect || !resultEl) {
+    console.error("Missing required DOM elements");
     return;
   }
 
-  const SUPPORTED = {
-    txt: ["pdf"]
+  const conversionMap = {
+    txt: ["pdf"],
+    pdf: ["txt"],
   };
 
-  function setStatus(msg) {
-    statusEl.textContent = msg;
+  function setResult(msg) {
+    if (resultEl) {
+      resultEl.textContent = msg;
+    }
   }
 
-  function isSupported(from, to) {
-    return SUPPORTED[from]?.includes(to);
-  }
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    setStatus("");
+  // Populate conversions when file is selected
+  fileInput.addEventListener("change", () => {
+    conversionSelect.innerHTML = "";
 
     const file = fileInput.files[0];
-    const from = fromSelect.value;
-    const to = toSelect.value;
+    if (!file) return;
+
+    const ext = file.name.split(".").pop().toLowerCase();
+
+    if (!conversionMap[ext]) {
+      const opt = document.createElement("option");
+      opt.textContent = "Unsupported file type";
+      opt.value = "";
+      conversionSelect.appendChild(opt);
+      return;
+    }
+
+    conversionMap[ext].forEach((to) => {
+      const opt = document.createElement("option");
+      opt.value = `${ext}-to-${to}`;
+      opt.textContent = `${ext.toUpperCase()} → ${to.toUpperCase()}`;
+      conversionSelect.appendChild(opt);
+    });
+  });
+
+  // Handle submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setResult("");
+
+    const file = fileInput.files[0];
+    const conversion = conversionSelect.value;
 
     if (!file) {
-      setStatus("Please select a file.");
+      setResult("Please select a file.");
       return;
     }
 
-    if (!isSupported(from, to)) {
-      setStatus("Unsupported conversion.");
+    if (!conversion) {
+      setResult("Unsupported conversion.");
       return;
     }
+
+    const [from, to] = conversion.split("-to-");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -52,16 +71,15 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("to", to);
 
     try {
-      setStatus("Converting…");
+      setResult("Processing…");
 
-      const res = await fetch("/", {
+      const res = await fetch("https://converter-worker.norxonics.workers.dev/", {
         method: "POST",
-        body: formData
+        body: formData,
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.error || "Conversion failed");
+        throw new Error("Conversion failed");
       }
 
       const blob = await res.blob();
@@ -69,16 +87,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = "converted.pdf";
+      a.download = `converted.${to}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
 
       URL.revokeObjectURL(url);
-      setStatus("Conversion complete!");
+      setResult("Conversion complete!");
     } catch (err) {
       console.error(err);
-      setStatus(err.message || "Conversion failed.");
+      setResult("Conversion failed.");
     }
   });
 });
