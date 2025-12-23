@@ -1,23 +1,12 @@
-/* General page styling */
 body {
   font-family: Arial, sans-serif;
   text-align: center;
   padding: 40px;
   background-color: #f4f4f4;
-  margin: 0;
 }
 
 header {
   margin-bottom: 30px;
-}
-
-h1 {
-  color: #333;
-}
-
-form {
-  display: inline-block;
-  margin-bottom: 20px;
 }
 
 input, select, button {
@@ -26,59 +15,24 @@ input, select, button {
   font-size: 16px;
 }
 
-/* Result messages */
-#result {
-  margin-top: 20px;
-  color: green;
-}
-
-/* Modal for processing */
 #processing-modal {
   display: none;
   position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 9999;
+  justify-content: center;
+  align-items: center;
 }
 
 .modal-box {
   background: #fff;
   padding: 20px;
-  margin: 100px auto;
-  width: 300px;
-  text-align: center;
   border-radius: 8px;
 }
 
-/* Ad placeholder */
 .ad-slot {
-  margin-top: 10px;
-  background: #eee;
-  height: 60px;
-  line-height: 60px;
-  color: #333;
-}
-
-/* Spinner for conversions (optional) */
-.spinner {
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #333;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  margin: 20px auto;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-footer {
-  margin-top: 40px;
-  color: #666;
+  margin-top: 20px;
+  width: 300px;
+  height: 250px;
+  background: #ddd;
 }
