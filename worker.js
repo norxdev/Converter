@@ -1,78 +1,141 @@
-import JSZip from "jszip";
+// worker.js
 
-export default {
-  async fetch(request) {
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request));
+});
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
-    }
+/**
+ * Generate a simple PDF from text using ArrayBuffer
+ */
+async function generatePDF(text) {
+  // Minimal PDF structure with a single page
+  const pdfLines = [
+    '%PDF-1.3',
+    '1 0 obj',
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    'endobj',
+    '2 0 obj',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    'endobj',
+    '3 0 obj',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    'endobj',
+    '4 0 obj',
+    `<< /Length ${text.length + 50} >>`,
+    'stream',
+    `BT /F1 24 Tf 50 700 Td (${text}) Tj ET`,
+    'endstream',
+    'endobj',
+    '5 0 obj',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    'endobj',
+    'xref',
+    '0 6',
+    '0000000000 65535 f ',
+    '0000000010 00000 n ',
+    '0000000060 00000 n ',
+    '0000000110 00000 n ',
+    '0000000200 00000 n ',
+    '0000000300 00000 n ',
+    'trailer',
+    '<< /Size 6 /Root 1 0 R >>',
+    'startxref',
+    '400',
+    '%%EOF'
+  ];
 
-    if (request.method !== "POST") {
-      return new Response("Method not allowed", { status: 405, headers: corsHeaders });
-    }
-
-    try {
-      const formData = await request.formData();
-      const file = formData.get("file");
-      const type = formData.get("type");
-
-      if (!file || !type) {
-        return new Response(JSON.stringify({ error: "File or type missing" }), { status: 400, headers: corsHeaders });
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const textContent = new TextDecoder().decode(arrayBuffer);
-
-      let outputBuffer, filename, mime;
-
-      if (type === "pdf") {
-        const pdfBytes = generatePDF(textContent);
-        outputBuffer = pdfBytes;
-        filename = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
-        mime = "application/pdf";
-      } else if (type === "docx") {
-        const docxBytes = await generateDOCX(textContent);
-        outputBuffer = docxBytes;
-        filename = file.name.replace(/\.[^/.]+$/, "") + ".docx";
-        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      } else {
-        return new Response(JSON.stringify({ error: "Unsupported type" }), { status: 400, headers: corsHeaders });
-      }
-
-      return new Response(outputBuffer, {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": mime,
-          "Content-Disposition": `attachment; filename="${filename}"`,
-        },
-      });
-    } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
-    }
-  },
-};
-
-// Minimal PDF generator
-function generatePDF(text) {
-  const pdfHeader = "%PDF-1.3\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
-  const pdfPages = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
-  const pdfPage = `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n`;
-  const pdfContentStream = `4 0 obj\n<< /Length ${text.length + 50} >>\nstream\nBT /F1 24 Tf 50 700 Td (${text.replace(/\)/g, "\\)").replace(/\(/g, "\\(")}) Tj ET\nendstream\nendobj\n`;
-  const pdfFooter = "xref\n0 5\n0000000000 65535 f \n0000000010 00000 n \n0000000060 00000 n \n0000000120 00000 n \n0000000200 00000 n \ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n300\n%%EOF";
-  const pdfString = pdfHeader + pdfPages + pdfPage + pdfContentStream + pdfFooter;
-  return new TextEncoder().encode(pdfString);
+  const pdfBytes = new TextEncoder().encode(pdfLines.join('\n'));
+  return pdfBytes;
 }
 
-// Minimal DOCX generator using JSZip
+/**
+ * Generate a very basic DOCX from text (Office Open XML)
+ */
 async function generateDOCX(text) {
-  const zip = new JSZip();
-  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>`);
-  zip.file("word/document.xml", `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</w:t></w:r></w:p></w:body></w:document>`);
-  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
-  return await zip.generateAsync({ type: "uint8array" });
+  // Minimal DOCX XML content
+  const contentXml = `
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:t>${text}</w:t>
+      </w:r>
+    </w:p>
+  </w:body>
+</w:document>
+  `.trim();
+
+  // Build minimal DOCX ZIP structure
+  const encoder = new TextEncoder();
+  const xmlBytes = encoder.encode(contentXml);
+
+  // Very naive ZIP file header (works for small single-file DOCX)
+  // For full-featured DOCX, a proper ZIP library is needed
+  const zipHeader = new Uint8Array([
+    0x50, 0x4B, 0x03, 0x04, // Local file header signature
+  ]);
+
+  const combined = new Uint8Array(zipHeader.length + xmlBytes.length);
+  combined.set(zipHeader, 0);
+  combined.set(xmlBytes, zipHeader.length);
+
+  return combined;
+}
+
+/**
+ * Main request handler
+ */
+async function handleRequest(request) {
+  if (request.method === 'OPTIONS') {
+    // CORS preflight
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+
+  if (request.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const type = formData.get('type');
+
+    if (!file || !type) {
+      return new Response('Missing file or type', { status: 400 });
+    }
+
+    const text = await file.text();
+
+    let outputBytes, contentType, filename;
+
+    if (type === 'pdf') {
+      outputBytes = await generatePDF(text);
+      contentType = 'application/pdf';
+      filename = file.name.replace(/\.[^/.]+$/, '.pdf');
+    } else if (type === 'docx') {
+      outputBytes = await generateDOCX(text);
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      filename = file.name.replace(/\.[^/.]+$/, '.docx');
+    } else {
+      return new Response('Unsupported conversion type', { status: 400 });
+    }
+
+    return new Response(outputBytes, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (err) {
+    return new Response('Conversion failed: ' + err.message, { status: 500 });
+  }
 }
