@@ -1,0 +1,13 @@
+{
+  "name": "converter-worker",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "pdf-lib": "^1.19.0",
+    "pdfjs-dist": "^3.12.313",
+    "mammoth": "^1.4.2"
+  },
+  "devDependencies": {
+    "@cloudflare/wrangler": "^4.56.0"
+  }
+}
