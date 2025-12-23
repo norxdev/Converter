@@ -1,78 +1,70 @@
+// worker.js
+import PDFDocument from "pdfkit";
+import { Document, Packer, Paragraph } from "docx";
+import pdfParse from "pdf-parse";
+
+// CORS headers
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 export default {
   async fetch(request) {
+    // Handle preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
+      return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file");
-    const from = formData.get("from");
-    const to = formData.get("to");
+    try {
+      const formData = await request.formData();
+      const file = formData.get("file");
+      const conversion = formData.get("conversion");
 
-    if (!file || !from || !to) {
-      return new Response("Missing fields", { status: 400 });
-    }
-
-    // Only supported conversion for now
-    if (from !== "txt" || to !== "pdf") {
-      return new Response(
-        JSON.stringify({ error: "Conversion not supported yet" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
-    }
-
-    const text = await file.text();
-
-    // Escape PDF-breaking characters
-    const safeText = text
-      .replace(/\\/g, "\\\\")
-      .replace(/\(/g, "\\(")
-      .replace(/\)/g, "\\)");
-
-    // Minimal valid PDF (Workers-safe)
-    const pdf = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]
-/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
-endobj
-4 0 obj
-<< /Length ${safeText.length + 50} >>
-stream
-BT
-/F1 12 Tf
-72 720 Td
-(${safeText}) Tj
-ET
-endstream
-endobj
-5 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-xref
-0 6
-0000000000 65535 f
-trailer
-<< /Root 1 0 R /Size 6 >>
-startxref
-%%EOF`;
-
-    return new Response(
-      new Uint8Array([...pdf].map(c => c.charCodeAt(0))),
-      {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": "attachment; filename=converted.pdf"
-        }
+      if (!file || !conversion) {
+        return new Response("Missing file or conversion type", { status: 400, headers: corsHeaders });
       }
-    );
-  }
+
+      const [from, to] = conversion.split("-to-");
+      let converted;
+
+      // Simple txt <-> pdf <-> docx simulation
+      if (from === "txt" && to === "pdf") {
+        const doc = new PDFDocument();
+        let chunks = [];
+        doc.on("data", (chunk) => chunks.push(chunk));
+        doc.on("end", () => {});
+        doc.text(await file.text());
+        doc.end();
+        converted = new Blob(chunks, { type: "application/pdf" });
+      } else if (from === "txt" && to === "docx") {
+        const doc = new Document({
+          sections: [{ children: [new Paragraph(await file.text())] }],
+        });
+        const buffer = await Packer.toBuffer(doc);
+        converted = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      } else if (from === "pdf" && to === "txt") {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfData = await pdfParse(Buffer.from(arrayBuffer));
+        converted = new Blob([pdfData.text], { type: "text/plain" });
+      } else {
+        return new Response("Unsupported conversion type", { status: 400, headers: corsHeaders });
+      }
+
+      const arrayBuffer = await converted.arrayBuffer();
+      return new Response(arrayBuffer, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": converted.type,
+        },
+      });
+    } catch (err) {
+      return new Response("Conversion failed: " + err.message, { status: 500, headers: corsHeaders });
+    }
+  },
 };
