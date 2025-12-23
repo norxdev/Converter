@@ -5,8 +5,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const toSelect = document.getElementById("to");
   const statusEl = document.getElementById("result");
 
-  if (!form) {
-    console.error("Form not found");
+  if (!form || !fileInput || !fromSelect || !toSelect || !statusEl) {
+    console.error("One or more required DOM elements are missing", {
+      form,
+      fileInput,
+      fromSelect,
+      toSelect,
+      statusEl
+    });
     return;
   }
 
@@ -14,25 +20,29 @@ document.addEventListener("DOMContentLoaded", () => {
     txt: ["pdf"]
   };
 
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+  }
+
   function isSupported(from, to) {
     return SUPPORTED[from]?.includes(to);
   }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    statusEl.textContent = "";
+    setStatus("");
 
     const file = fileInput.files[0];
     const from = fromSelect.value;
     const to = toSelect.value;
 
     if (!file) {
-      statusEl.textContent = "Please select a file.";
+      setStatus("Please select a file.");
       return;
     }
 
     if (!isSupported(from, to)) {
-      statusEl.textContent = "Unsupported conversion.";
+      setStatus("Unsupported conversion.");
       return;
     }
 
@@ -42,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("to", to);
 
     try {
-      statusEl.textContent = "Converting…";
+      setStatus("Converting…");
 
       const res = await fetch("/", {
         method: "POST",
@@ -65,9 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
       a.remove();
 
       URL.revokeObjectURL(url);
-      statusEl.textContent = "Conversion complete!";
+      setStatus("Conversion complete!");
     } catch (err) {
-      statusEl.textContent = err.message;
+      console.error(err);
+      setStatus(err.message || "Conversion failed.");
     }
   });
 });
