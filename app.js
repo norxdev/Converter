@@ -1,13 +1,14 @@
-const conversionMap = {
-  'pdf': ['txt'],
-  'txt': ['pdf', 'docx'],
-  'docx': ['txt']
-};
-
 const fileInput = document.getElementById("file-input");
 const conversionType = document.getElementById("conversion-type");
-const resultDiv = document.getElementById("result");
-const processingModal = document.getElementById("processing-modal");
+const uploadForm = document.getElementById("upload-form");
+const modal = document.getElementById("processing-modal");
+const modalStatus = document.getElementById("modal-status");
+
+const conversionMap = {
+  'txt': ['pdf', 'docx'],
+  'md': ['pdf', 'docx'],
+  'csv': ['pdf', 'docx']
+};
 
 fileInput.addEventListener("change", () => {
   const file = fileInput.files[0];
@@ -24,49 +25,45 @@ fileInput.addEventListener("change", () => {
       conversionType.appendChild(option);
     });
   } else {
-    conversionType.innerHTML = '<option value="">Unsupported file type</option>';
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Unsupported file type';
+    conversionType.appendChild(option);
   }
 });
 
-document.getElementById("upload-form").addEventListener("submit", async (e) => {
+uploadForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const file = fileInput.files[0];
   const conversion = conversionType.value;
-  if (!file || !conversion) {
-    resultDiv.textContent = "Please select a file and conversion type!";
-    return;
-  }
+  if (!file || !conversion) return alert("Please select a valid file and conversion type.");
 
-  processingModal.style.display = "flex";
+  modal.style.display = "block";
+  modalStatus.textContent = `Converting "${file.name}" to ${conversion.split('-to-')[1].toUpperCase()}...`;
 
   const formData = new FormData();
   formData.append("file", file);
   formData.append("conversion", conversion);
 
   try {
-    const res = await fetch("https://converter-worker.norxonics.workers.dev", {
+    const response = await fetch("https://converter-worker.norxonics.workers.dev/", {
       method: "POST",
       body: formData
     });
 
-    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    if (!response.ok) throw new Error("Conversion failed");
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const blob = await response.blob();
     const a = document.createElement("a");
-    a.href = url;
-    const ext = conversion.split("-to-")[1];
-    a.download = `converted-file.${ext}`;
+    a.href = URL.createObjectURL(blob);
+    a.download = `converted-file.${conversion.split('-to-')[1]}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-
-    resultDiv.textContent = "Conversion successful!";
   } catch (err) {
-    console.error(err);
-    resultDiv.textContent = "Conversion failed: " + err.message;
+    alert("Conversion failed: " + err.message);
   } finally {
-    processingModal.style.display = "none";
+    modal.style.display = "none";
   }
 });
