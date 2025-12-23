@@ -1,32 +1,29 @@
-// app.js
 const fileInput = document.getElementById("file-input");
 const conversionType = document.getElementById("conversion-type");
 const resultDiv = document.getElementById("result");
-const processingModal = document.getElementById("processing-modal");
+const uploadForm = document.getElementById("upload-form");
+const modal = document.getElementById("processing-modal");
+const modalStatus = document.getElementById("modal-status");
 
-const WORKER_URL = "https://converter-worker.norxonics.workers.dev/";
-
-// Supported file conversions
+// Map of supported file types
 const conversionMap = {
   txt: ["pdf", "docx"],
   pdf: ["txt"],
-  docx: ["txt", "pdf"],
 };
 
-// Update dropdown when a file is selected
+// Populate conversion options
 fileInput.addEventListener("change", () => {
   const file = fileInput.files[0];
-  conversionType.innerHTML = "";
-
   if (!file) return;
 
   const ext = file.name.split(".").pop().toLowerCase();
+  conversionType.innerHTML = "";
 
   if (conversionMap[ext]) {
-    conversionMap[ext].forEach((to) => {
+    conversionMap[ext].forEach((target) => {
       const option = document.createElement("option");
-      option.value = `${ext}-to-${to}`;
-      option.textContent = `${ext.toUpperCase()} → ${to.toUpperCase()}`;
+      option.value = `${ext}-to-${target}`;
+      option.textContent = `${ext.toUpperCase()} → ${target.toUpperCase()}`;
       conversionType.appendChild(option);
     });
   } else {
@@ -38,49 +35,44 @@ fileInput.addEventListener("change", () => {
 });
 
 // Handle form submit
-document.getElementById("upload-form").addEventListener("submit", async (e) => {
+uploadForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const file = fileInput.files[0];
   const conversion = conversionType.value;
-
-  if (!file) {
-    resultDiv.textContent = "Please select a file!";
-    return;
-  }
-  if (!conversion) {
-    resultDiv.textContent = "Unsupported conversion type!";
+  if (!file || !conversion) {
+    alert("Please select a file and conversion type.");
     return;
   }
 
   // Show processing modal
-  processingModal.style.display = "block";
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("conversion", conversion);
+  modal.style.display = "block";
+  modalStatus.textContent = `Converting ${file.name}...`;
 
   try {
-    const res = await fetch(WORKER_URL, {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("conversion", conversion);
+
+    const res = await fetch("https://converter-worker.norxonics.workers.dev", {
       method: "POST",
       body: formData,
     });
 
-    if (!res.ok) throw new Error(`Status: ${res.status}`);
+    if (!res.ok) throw new Error("Conversion failed");
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-
-    // Hide modal
-    processingModal.style.display = "none";
-
-    resultDiv.innerHTML = `
-      File converted successfully!<br>
-      <a href="${url}" download="converted.${conversion.split("-to-")[1]}">
-        Download Converted File
-      </a>
-    `;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `converted.${conversion.split("-to-")[1]}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   } catch (err) {
-    processingModal.style.display = "none";
-    resultDiv.textContent = `Conversion failed: ${err.message}`;
+    alert("Conversion failed: " + err.message);
+  } finally {
+    modal.style.display = "none";
   }
 });
