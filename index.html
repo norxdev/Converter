@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Free File Converter</title>
+  <title>Converter</title>
   <meta name="description" content="Convert files online for free. No signup required.">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
 <body>
+
 <header>
   <h1>Free File Converter</h1>
   <p>Fast, private, no signup required.</p>
@@ -15,12 +16,15 @@
 
 <form id="upload-form">
   <input type="file" id="file-input" required>
+
   <select id="conversion-type">
-    <option value="pdf">Convert to PDF</option>
-    <option value="docx">Convert to DOCX</option>
+    <option value="">Select a file first</option>
   </select>
+
   <button type="submit">Convert</button>
 </form>
+
+<div id="result"></div>
 
 <div id="processing-modal">
   <div class="modal-box">
@@ -28,5 +32,6 @@
     <div class="ad-slot">Ad Placeholder</div>
   </div>
 </div>
+
 </body>
 </html>
