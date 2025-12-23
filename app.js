@@ -5,19 +5,18 @@ const modal = document.getElementById("processing-modal");
 const modalStatus = document.getElementById("modal-status");
 const convertBtn = document.getElementById("convert-btn");
 
-// Conversion map (frontend truth)
+// Map of supported conversions
 const conversionMap = {
   txt: ["pdf"],
-  pdf: ["txt"],
+  pdf: ["txt", "png"],
   docx: ["pdf", "txt"],
   png: ["jpg"],
   jpg: ["png"]
 };
 
-// Detect file type by extension
+// Detect file type from extension
 function getFileType(file) {
-  const ext = file.name.split(".").pop().toLowerCase();
-  return ext;
+  return file.name.split(".").pop().toLowerCase();
 }
 
 // Update dropdown dynamically
