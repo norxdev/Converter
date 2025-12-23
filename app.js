@@ -6,35 +6,37 @@ const conversionType = document.getElementById("conversion-type");
 const modal = document.getElementById("processing-modal");
 const modalText = document.getElementById("modal-status");
 
-const conversionMap = {
-  txt: ["txt", "pdf", "docx"]
-};
+/**
+ * Targets we allow users to choose.
+ * Backend decides what actually converts.
+ */
+const TARGETS = ["txt", "pdf", "docx"];
 
 fileInput.addEventListener("change", () => {
   conversionType.innerHTML = "";
+
   const file = fileInput.files[0];
   if (!file) return;
 
-  const ext = file.name.split(".").pop().toLowerCase();
-  if (!conversionMap[ext]) {
-    conversionType.innerHTML = `<option>Unsupported</option>`;
-    return;
-  }
-
-  conversionMap[ext].forEach(t => {
+  // Always allow selecting a target
+  TARGETS.forEach(target => {
     const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = `${ext.toUpperCase()} → ${t.toUpperCase()}`;
+    opt.value = target;
+    opt.textContent = `Convert to ${target.toUpperCase()}`;
     conversionType.appendChild(opt);
   });
 });
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const file = fileInput.files[0];
   const target = conversionType.value;
 
-  if (!file || !target) return;
+  if (!file || !target) {
+    alert("Please select a file and conversion type.");
+    return;
+  }
 
   modal.style.display = "flex";
   modalText.textContent = "Uploading file...";
@@ -44,16 +46,18 @@ form.addEventListener("submit", async (e) => {
   data.append("target", target);
 
   try {
-    modalText.textContent = "Converting file...";
+    modalText.textContent = "Processing conversion...";
 
     const res = await fetch(WORKER_URL, {
       method: "POST",
-      body: data
+      body: data,
     });
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      throw new Error("Conversion failed");
+    }
 
-    modalText.textContent = "Finalizing download...";
+    modalText.textContent = "Preparing download...";
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -65,8 +69,8 @@ form.addEventListener("submit", async (e) => {
     a.click();
     a.remove();
 
-  } catch {
-    alert("Conversion failed.");
+  } catch (err) {
+    alert("Conversion failed. This file type may have limited support.");
   } finally {
     modal.style.display = "none";
   }
