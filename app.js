@@ -1,72 +1,44 @@
-const conversionMap = {
-  'pdf': ['txt'],
-  'txt': ['pdf', 'docx'],
-  'docx': ['txt']
-};
-
+const form = document.getElementById("upload-form");
 const fileInput = document.getElementById("file-input");
 const conversionType = document.getElementById("conversion-type");
-const resultDiv = document.getElementById("result");
-const processingModal = document.getElementById("processing-modal");
+const modal = document.getElementById("processing-modal");
+const modalStatus = document.getElementById("modal-status");
 
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  const ext = file.name.split('.').pop().toLowerCase();
-  conversionType.innerHTML = '';
-
-  if (conversionMap[ext]) {
-    conversionMap[ext].forEach(target => {
-      const option = document.createElement('option');
-      option.value = `${ext}-to-${target}`;
-      option.textContent = `${ext.toUpperCase()} → ${target.toUpperCase()}`;
-      conversionType.appendChild(option);
-    });
-  } else {
-    conversionType.innerHTML = '<option value="">Unsupported file type</option>';
-  }
-});
-
-document.getElementById("upload-form").addEventListener("submit", async (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  if (!fileInput.files.length) return;
+
+  modal.style.display = "block";
+  modalStatus.textContent = "Processing...";
+
   const file = fileInput.files[0];
-  const conversion = conversionType.value;
-  if (!file || !conversion) {
-    resultDiv.textContent = "Please select a file and conversion type!";
-    return;
-  }
-
-  processingModal.style.display = "flex";
-
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("conversion", conversion);
+  formData.append("type", conversionType.value);
 
   try {
-    const res = await fetch("https://converter-worker.norxonics.workers.dev", {
+    const response = await fetch("/api/convert", {
       method: "POST",
       body: formData
     });
 
-    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    if (!response.ok) throw new Error("Conversion failed");
 
-    const blob = await res.blob();
+    const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const ext = conversion.split("-to-")[1];
-    a.download = `converted-file.${ext}`;
+    a.download = file.name.split(".")[0] + "." + conversionType.value;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
 
-    resultDiv.textContent = "Conversion successful!";
+    modalStatus.textContent = "Done!";
+    setTimeout(() => modal.style.display = "none", 1000);
+
   } catch (err) {
-    console.error(err);
-    resultDiv.textContent = "Conversion failed: " + err.message;
-  } finally {
-    processingModal.style.display = "none";
+    modalStatus.textContent = "Conversion failed: " + err.message;
+    setTimeout(() => modal.style.display = "none", 2000);
   }
 });
