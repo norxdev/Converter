@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free File Converter</title>
+  <title>Converter</title>
   <meta name="description" content="Convert files online for free. No signup required.">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
@@ -15,28 +14,20 @@
   <p>Fast, private, no signup required.</p>
 </header>
 
-<main>
-  <form id="upload-form">
-    <input type="file" id="file-input" required>
-    <select id="conversion-type">
-      <option value="">Select a file first</option>
-    </select>
-    <button type="submit">Convert</button>
-  </form>
+<form id="upload-form">
+  <input type="file" id="file-input" required>
+  <select id="conversion-type"></select>
+  <button type="submit">Convert</button>
+</form>
 
-  <div id="processing-modal">
-    <div class="modal-box">
-      <p id="modal-status">Processing...</p>
-      <div class="ad-slot">Ad Placeholder</div>
-    </div>
+<div id="processing-modal">
+  <div class="modal-box">
+    <p id="modal-status">Processing...</p>
+    <div class="ad-slot">Ad Placeholder</div>
   </div>
+</div>
 
-  <div id="result"></div>
-</main>
-
-<footer>
-  <p>&copy; 2025 Free File Converter. All rights reserved.</p>
-</footer>
+<div id="result"></div>
 
 </body>
 </html>
