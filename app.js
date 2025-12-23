@@ -6,26 +6,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalStatus = document.getElementById("modal-status");
 
   fileInput.addEventListener("change", () => {
-    const file = fileInput.files[0];
     typeSelect.innerHTML = "";
-    if (!file) return;
+    if (!fileInput.files[0]) return;
+    const ext = fileInput.files[0].name.split('.').pop().toLowerCase();
+    const options = [];
 
-    const type = file.name.split('.').pop().toLowerCase();
-    let options = [];
+    if (ext === 'txt') options.push('pdf', 'docx');
+    if (ext === 'pdf') options.push('txt');
+    if (ext === 'docx') options.push('txt', 'pdf');
 
-    if (type === 'txt') options = ['pdf', 'docx'];
-    else if (type === 'pdf') options = ['txt', 'jpg'];
-    else if (type === 'docx') options = ['txt', 'pdf'];
-
-    options.forEach(opt => {
-      const optionEl = document.createElement("option");
-      optionEl.value = `${type}-to-${opt}`;
-      optionEl.textContent = opt.toUpperCase();
-      typeSelect.appendChild(optionEl);
+    options.forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o;
+      opt.textContent = o.toUpperCase();
+      typeSelect.appendChild(opt);
     });
   });
 
-  form.addEventListener("submit", async e => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!fileInput.files[0]) return;
 
@@ -48,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = fileInput.files[0].name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value.split("-to-")[1];
+      a.download = fileInput.files[0].name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value;
       document.body.appendChild(a);
       a.click();
       a.remove();
