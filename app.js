@@ -1,77 +1,68 @@
-const WORKER_URL = "https://converter-worker.norxonics.workers.dev";
+const form = document.getElementById("convertForm");
+const fileInput = document.getElementById("file");
+const fromSelect = document.getElementById("from");
+const toSelect = document.getElementById("to");
+const statusEl = document.getElementById("status");
 
-const form = document.getElementById("upload-form");
-const fileInput = document.getElementById("file-input");
-const conversionType = document.getElementById("conversion-type");
-const modal = document.getElementById("processing-modal");
-const modalText = document.getElementById("modal-status");
+// Supported conversions (expand safely)
+const SUPPORTED = {
+  txt: ["pdf"]
+};
 
-/**
- * Targets we allow users to choose.
- * Backend decides what actually converts.
- */
-const TARGETS = ["txt", "pdf", "docx"];
-
-fileInput.addEventListener("change", () => {
-  conversionType.innerHTML = "";
-
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  // Always allow selecting a target
-  TARGETS.forEach(target => {
-    const opt = document.createElement("option");
-    opt.value = target;
-    opt.textContent = `Convert to ${target.toUpperCase()}`;
-    conversionType.appendChild(opt);
-  });
-});
+function isSupported(from, to) {
+  return SUPPORTED[from]?.includes(to);
+}
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+  statusEl.textContent = "";
 
   const file = fileInput.files[0];
-  const target = conversionType.value;
+  const from = fromSelect.value;
+  const to = toSelect.value;
 
-  if (!file || !target) {
-    alert("Please select a file and conversion type.");
+  if (!file) {
+    statusEl.textContent = "Please select a file.";
     return;
   }
 
-  modal.style.display = "flex";
-  modalText.textContent = "Uploading file...";
+  if (!isSupported(from, to)) {
+    statusEl.textContent = "This conversion is not supported yet.";
+    return;
+  }
 
-  const data = new FormData();
-  data.append("file", file);
-  data.append("target", target);
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("from", from);
+  formData.append("to", to);
 
   try {
-    modalText.textContent = "Processing conversion...";
+    statusEl.textContent = "Converting...";
 
-    const res = await fetch(WORKER_URL, {
+    const res = await fetch("/", {
       method: "POST",
-      body: data,
+      body: formData
     });
 
     if (!res.ok) {
-      throw new Error("Conversion failed");
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error || "Conversion failed");
     }
 
-    modalText.textContent = "Preparing download...";
-
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
 
+    // Download
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `converted.${target}`;
+    a.download = `converted.${to}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(url);
 
+    statusEl.textContent = "Conversion complete!";
   } catch (err) {
-    alert("Conversion failed. This file type may have limited support.");
-  } finally {
-    modal.style.display = "none";
+    statusEl.textContent = err.message;
   }
 });
