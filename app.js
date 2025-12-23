@@ -5,33 +5,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const modal = document.getElementById("processing-modal");
   const modalStatus = document.getElementById("modal-status");
 
-  fileInput.addEventListener("change", () => {
-    typeSelect.innerHTML = "";
-    if (!fileInput.files[0]) return;
-    const ext = fileInput.files[0].name.split('.').pop().toLowerCase();
-    const options = [];
-
-    if (ext === 'txt') options.push('pdf', 'docx');
-    if (ext === 'pdf') options.push('txt');
-    if (ext === 'docx') options.push('txt', 'pdf');
-
-    options.forEach(o => {
-      const opt = document.createElement("option");
-      opt.value = o;
-      opt.textContent = o.toUpperCase();
-      typeSelect.appendChild(opt);
-    });
-  });
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!fileInput.files[0]) return;
+
+    const file = fileInput.files[0];
+    // Auto-detect file type
+    const ext = file.name.split(".").pop().toLowerCase();
+    typeSelect.innerHTML = "";
+
+    if (ext === "txt") {
+      typeSelect.innerHTML = `
+        <option value="txt-to-pdf">TXT → PDF</option>
+        <option value="txt-to-docx">TXT → DOCX</option>
+      `;
+    } else if (ext === "docx") {
+      typeSelect.innerHTML = `
+        <option value="docx-to-txt">DOCX → TXT</option>
+      `;
+    } else {
+      typeSelect.innerHTML = `<option value="">Unsupported file</option>`;
+    }
 
     modal.classList.remove("hidden");
     modalStatus.textContent = "Processing...";
 
     const formData = new FormData();
-    formData.append("file", fileInput.files[0]);
+    formData.append("file", file);
     formData.append("type", typeSelect.value);
 
     try {
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = fileInput.files[0].name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value;
+      a.download = file.name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value.split("-").pop();
       document.body.appendChild(a);
       a.click();
       a.remove();
