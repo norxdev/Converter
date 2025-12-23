@@ -1,42 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Converter</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="description" content="Convert files online for free. No signup required.">
+  <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
 <body>
 
 <header>
-  <h1>Converter</h1>
-  <p>Upload a file and convert it (demo)</p>
+  <h1>Free File Converter</h1>
+  <p>Fast, private, no signup required.</p>
 </header>
 
-<main>
-  <form id="upload-form">
-    <input type="file" id="file-input" required />
-    <select id="conversion-type">
-      <option value="">Select file first</option>
-    </select>
-    <button type="submit">Convert</button>
-  </form>
+<form id="upload-form">
+  <input type="file" id="file-input" required>
+  <select id="conversion-type"></select>
+  <button type="submit">Convert</button>
+</form>
 
-  <div id="result"></div>
-</main>
-
-<!-- Processing Modal -->
-<div id="processing-modal" class="modal hidden">
-  <div class="modal-content">
-    <p>Processing your file…</p>
-    <div class="spinner"></div>
+<div id="processing-modal">
+  <div class="modal-box">
+    <p id="modal-status">Processing...</p>
+    <div class="ad-slot">Ad Placeholder</div>
   </div>
 </div>
-
-<footer>
-  <p>&copy; 2025 Converter</p>
-</footer>
 
 </body>
 </html>
