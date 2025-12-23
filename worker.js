@@ -2,7 +2,6 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 import mammoth from 'mammoth';
 
-// Worker entry
 export default {
   async fetch(request) {
     if (request.method === "OPTIONS") {
