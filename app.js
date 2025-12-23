@@ -1,102 +1,73 @@
-// Supported conversions (demo mapping)
+const WORKER_URL = "https://converter-worker.norxonics.workers.dev";
+
+const form = document.getElementById("upload-form");
+const fileInput = document.getElementById("file-input");
+const conversionType = document.getElementById("conversion-type");
+const modal = document.getElementById("processing-modal");
+const modalText = document.getElementById("modal-status");
+
 const conversionMap = {
-  pdf: ['txt'],
-  txt: ['pdf'],
-  docx: ['txt']
+  txt: ["txt", "pdf", "docx"]
 };
 
-// 🔴 Replace with your deployed Cloudflare Worker URL
-const WORKER_URL = 'https://converter-worker.norxonics.workers.dev';
-
-const fileInput = document.getElementById('file-input');
-const conversionType = document.getElementById('conversion-type');
-const form = document.getElementById('upload-form');
-const result = document.getElementById('result');
-const modal = document.getElementById('processing-modal');
-
-// Populate conversion options dynamically when a file is selected
-fileInput.addEventListener('change', () => {
-  conversionType.innerHTML = '';
-
+fileInput.addEventListener("change", () => {
+  conversionType.innerHTML = "";
   const file = fileInput.files[0];
   if (!file) return;
 
-  const ext = file.name.split('.').pop().toLowerCase();
-
+  const ext = file.name.split(".").pop().toLowerCase();
   if (!conversionMap[ext]) {
-    const opt = document.createElement('option');
-    opt.textContent = 'Unsupported file type';
-    opt.value = '';
-    conversionType.appendChild(opt);
+    conversionType.innerHTML = `<option>Unsupported</option>`;
     return;
   }
 
-  conversionMap[ext].forEach(target => {
-    const opt = document.createElement('option');
-    opt.value = target;
-    opt.textContent = `${ext.toUpperCase()} → ${target.toUpperCase()}`;
+  conversionMap[ext].forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = `${ext.toUpperCase()} → ${t.toUpperCase()}`;
     conversionType.appendChild(opt);
   });
 });
 
-// Handle form submit (conversion)
-form.addEventListener('submit', async (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
-
   const file = fileInput.files[0];
   const target = conversionType.value;
 
-  if (!file || !target) {
-    result.textContent = 'Please select a file and target format.';
-    return;
-  }
+  if (!file || !target) return;
 
-  // Show processing modal
-  modal.classList.remove('hidden');
-  result.textContent = '';
+  modal.style.display = "flex";
+  modalText.textContent = "Uploading file...";
+
+  const data = new FormData();
+  data.append("file", file);
+  data.append("target", target);
 
   try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('target', target);
+    modalText.textContent = "Converting file...";
 
-    const response = await fetch(WORKER_URL, {
-      method: 'POST',
-      body: formData
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      body: data
     });
 
-    // If response fails, throw to catch
-    if (!response.ok) {
-      throw new Error(`Request failed: ${response.status}`);
-    }
+    if (!res.ok) throw new Error();
 
-    const blob = await response.blob();
-    if (!blob || blob.size === 0) {
-      throw new Error('Empty file returned');
-    }
+    modalText.textContent = "Finalizing download...";
 
-    // Show success message
-    result.textContent = 'Conversion complete.';
-
-    // Trigger download
+    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+
+    const a = document.createElement("a");
     a.href = url;
     a.download = `converted.${target}`;
     document.body.appendChild(a);
     a.click();
+    a.remove();
 
-    // Cleanup
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
-
-  } catch (err) {
-    console.error(err);
-    result.textContent = 'Conversion failed.';
+  } catch {
+    alert("Conversion failed.");
   } finally {
-    // Hide spinner
-    modal.classList.add('hidden');
+    modal.style.display = "none";
   }
 });

@@ -1,62 +1,41 @@
 body {
   font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
+  background: #f4f4f4;
   text-align: center;
   padding: 40px;
 }
 
-header {
-  margin-bottom: 30px;
-}
-
-input, select, button {
-  padding: 10px;
-  margin: 5px;
-  font-size: 16px;
-}
-
-#result {
+form {
   margin-top: 20px;
-  color: green;
 }
 
-/* Modal */
-.modal {
+button {
+  padding: 10px 20px;
+}
+
+#processing-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: white;
+  padding: 30px;
+  width: 300px;
+  border-radius: 8px;
+}
+
+.ad-slot {
+  margin-top: 20px;
+  height: 90px;
+  background: #eee;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-}
-
-.hidden {
-  display: none;
-}
-
-.modal-content {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  text-align: center;
-}
-
-/* Spinner */
-.spinner {
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #333;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  margin: 20px auto;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  font-size: 12px;
+  color: #666;
 }
