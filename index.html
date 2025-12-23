@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Free File Converter</title>
-  <meta name="description" content="Convert files online for free. No signup required." />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Converter</title>
+  <meta name="description" content="Convert files online for free. No signup required.">
+  <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
 <body>
 
 <header>
   <h1>Free File Converter</h1>
-  <p>Fast, private, automatic file detection.</p>
+  <p>Fast, private, no signup required.</p>
 </header>
 
 <form id="upload-form">
-  <input type="file" id="file-input" required />
-
-  <select id="conversion-type" required disabled>
-    <option value="">Select output format</option>
+  <input type="file" id="file-input" required>
+  <select id="conversion-type">
+    <!-- Will populate dynamically -->
   </select>
-
-  <button type="submit" disabled id="convert-btn">Convert</button>
+  <button type="submit">Convert</button>
 </form>
 
 <div id="processing-modal" class="hidden">
