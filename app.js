@@ -2,51 +2,43 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("upload-form");
   const fileInput = document.getElementById("file-input");
   const typeSelect = document.getElementById("conversion-type");
-  const convertButton = form.querySelector("button[type='submit']");
   const modal = document.getElementById("processing-modal");
   const modalStatus = document.getElementById("modal-status");
 
-  // Disable initially
-  typeSelect.disabled = true;
-  convertButton.disabled = true;
+  const conversionMap = {
+    txt: ["pdf", "docx"],
+    docx: ["txt"],
+    pdf: ["txt"],
+    csv: ["txt"],
+    md: ["txt", "pdf"],
+  };
 
-  // File detection
-  fileInput.addEventListener("change", async () => {
-    if (!fileInput.files[0]) {
-      typeSelect.disabled = true;
-      convertButton.disabled = true;
-      return;
-    }
-
-    // Detect file type (basic)
+  fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
-    let options = [];
+    if (!file) return;
 
-    if (file.type === "text/plain") {
-      options = ["pdf", "docx"];
-    } else if (file.type === "application/pdf") {
-      options = ["txt", "jpg"];
-    } else if (
-      file.type ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
-      options = ["pdf", "txt"];
-    } else {
-      options = ["pdf", "docx", "txt"];
-    }
+    // Enable dropdown and button
+    typeSelect.disabled = false;
+    form.querySelector("button[type='submit']").disabled = false;
+
+    // Detect extension
+    const ext = file.name.split(".").pop().toLowerCase();
+    const options = conversionMap[ext] || [];
 
     // Populate dropdown
     typeSelect.innerHTML = "";
     options.forEach((opt) => {
-      const optionEl = document.createElement("option");
-      optionEl.value = opt;
-      optionEl.textContent = opt.toUpperCase();
-      typeSelect.appendChild(optionEl);
+      const option = document.createElement("option");
+      option.value = opt;
+      option.textContent = opt.toUpperCase();
+      typeSelect.appendChild(option);
     });
 
-    // Enable controls
-    typeSelect.disabled = false;
-    convertButton.disabled = false;
+    if (options.length === 0) {
+      typeSelect.disabled = true;
+      form.querySelector("button[type='submit']").disabled = true;
+      alert("This file type is not supported.");
+    }
   });
 
   form.addEventListener("submit", async (e) => {
@@ -61,13 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("type", typeSelect.value);
 
     try {
-      const response = await fetch(
-        "https://converter-worker.norxonics.workers.dev",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch("https://converter-worker.norxonics.workers.dev", {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) throw new Error("Conversion failed");
 
@@ -77,9 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const a = document.createElement("a");
       a.href = url;
       a.download =
-        fileInput.files[0].name.replace(/\.[^/.]+$/, "") +
-        "." +
-        typeSelect.value;
+        fileInput.files[0].name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value;
       document.body.appendChild(a);
       a.click();
       a.remove();
