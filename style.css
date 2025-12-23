@@ -22,6 +22,12 @@ button {
   cursor: pointer;
 }
 
+#supported-types {
+  font-size: 0.9em;
+  color: #555;
+  margin: 5px 0 15px 0;
+}
+
 #processing-modal {
   position: fixed;
   top: 0; left: 0;
