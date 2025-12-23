@@ -1,19 +1,39 @@
-export async function onRequestPost({ request }) {
-  const formData = await request.formData();
-  const file = formData.get("file");
-  const conversion = formData.get("conversion");
+export default {
+  async fetch(request) {
+    if (request.method !== "POST") {
+      return new Response("Method Not Allowed", { status: 405 });
+    }
 
-  if (!file || !conversion) return new Response("Invalid request", { status: 400 });
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const from = formData.get("from");
+    const to = formData.get("to");
 
-  const text = await file.text();
-  const [fromExt, toExt] = conversion.split("-to-");
+    if (!file || !from || !to) {
+      return new Response("Missing fields", { status: 400 });
+    }
 
-  let content, mime, filename;
+    // Only supported conversion for now
+    if (from !== "txt" || to !== "pdf") {
+      return new Response(
+        JSON.stringify({ error: "Conversion not supported yet" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    }
 
-  if (toExt === "pdf") {
-    // Minimal PDF creation
-    const encoder = new TextEncoder();
-    const pdfText = `%PDF-1.4
+    const text = await file.text();
+
+    // Escape PDF-breaking characters
+    const safeText = text
+      .replace(/\\/g, "\\\\")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)");
+
+    // Minimal valid PDF (Workers-safe)
+    const pdf = `%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -21,65 +41,38 @@ endobj
 << /Type /Pages /Kids [3 0 R] /Count 1 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]
+/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
 endobj
 4 0 obj
-<< /Length ${text.length + 50} >>
+<< /Length ${safeText.length + 50} >>
 stream
 BT
-/F1 24 Tf
-100 700 Td
-(${text}) Tj
+/F1 12 Tf
+72 720 Td
+(${safeText}) Tj
 ET
 endstream
 endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
 xref
-0 5
-0000000000 65535 f 
-0000000010 00000 n 
-0000000060 00000 n 
-0000000110 00000 n 
-0000000160 00000 n 
+0 6
+0000000000 65535 f
 trailer
-<< /Size 5 /Root 1 0 R >>
+<< /Root 1 0 R /Size 6 >>
 startxref
-300
 %%EOF`;
 
-    content = encoder.encode(pdfText);
-    mime = "application/pdf";
-    filename = "converted.pdf";
-  } else if (toExt === "docx") {
-    const encoder = new TextEncoder();
-    const docxText = `PK\x03\x04...${text}`; // Placeholder minimal DOCX
-    content = encoder.encode(docxText);
-    mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    filename = "converted.docx";
-  } else {
-    content = new TextEncoder().encode(text);
-    mime = "text/plain";
-    filename = `converted.${toExt}`;
+    return new Response(
+      new Uint8Array([...pdf].map(c => c.charCodeAt(0))),
+      {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=converted.pdf"
+        }
+      }
+    );
   }
-
-  return new Response(content, {
-    status: 200,
-    headers: {
-      "Content-Type": mime,
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    }
-  });
-}
-
-// Optional CORS preflight handler
-export async function onRequestOptions() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    }
-  });
-}
+};
