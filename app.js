@@ -1,89 +1,64 @@
-const form = document.getElementById("upload-form");
-const fileInput = document.getElementById("file-input");
-const typeSelect = document.getElementById("conversion-type");
-const modal = document.getElementById("processing-modal");
-const modalStatus = document.getElementById("modal-status");
-const convertBtn = document.getElementById("convert-btn");
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("upload-form");
+  const fileInput = document.getElementById("file-input");
+  const typeSelect = document.getElementById("conversion-type");
+  const modal = document.getElementById("processing-modal");
+  const modalStatus = document.getElementById("modal-status");
 
-// Conversion map (frontend truth)
-const conversionMap = {
-  txt: ["pdf"],
-  pdf: ["txt"],
-  docx: ["pdf", "txt"],
-  png: ["jpg"],
-  jpg: ["png"]
-};
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    typeSelect.innerHTML = "";
+    if (!file) return;
 
-// Detect file type by extension
-function getFileType(file) {
-  const ext = file.name.split(".").pop().toLowerCase();
-  return ext;
-}
+    const type = file.name.split('.').pop().toLowerCase();
+    let options = [];
 
-// Update dropdown dynamically
-fileInput.addEventListener("change", () => {
-  typeSelect.innerHTML = '<option value="">Select output format</option>';
-  typeSelect.disabled = true;
-  convertBtn.disabled = true;
+    if (type === 'txt') options = ['pdf', 'docx'];
+    else if (type === 'pdf') options = ['txt', 'jpg'];
+    else if (type === 'docx') options = ['txt', 'pdf'];
 
-  if (!fileInput.files[0]) return;
-
-  const sourceType = getFileType(fileInput.files[0]);
-  const targets = conversionMap[sourceType];
-
-  if (!targets) {
-    alert("Unsupported file type");
-    return;
-  }
-
-  targets.forEach(t => {
-    const option = document.createElement("option");
-    option.value = t;
-    option.textContent = t.toUpperCase();
-    typeSelect.appendChild(option);
+    options.forEach(opt => {
+      const optionEl = document.createElement("option");
+      optionEl.value = `${type}-to-${opt}`;
+      optionEl.textContent = opt.toUpperCase();
+      typeSelect.appendChild(optionEl);
+    });
   });
 
-  typeSelect.disabled = false;
-  convertBtn.disabled = false;
-});
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!fileInput.files[0]) return;
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+    modal.classList.remove("hidden");
+    modalStatus.textContent = "Processing...";
 
-  const file = fileInput.files[0];
-  const type = typeSelect.value;
-  if (!file || !type) return;
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    formData.append("type", typeSelect.value);
 
-  modal.classList.remove("hidden");
-  modalStatus.textContent = "Processing...";
+    try {
+      const response = await fetch("https://converter-worker.norxonics.workers.dev", {
+        method: "POST",
+        body: formData,
+      });
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("type", type);
+      if (!response.ok) throw new Error("Conversion failed");
 
-  try {
-    const response = await fetch("https://converter-worker.norxonics.workers.dev", {
-      method: "POST",
-      body: formData,
-    });
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileInput.files[0].name.replace(/\.[^/.]+$/, "") + "." + typeSelect.value.split("-to-")[1];
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
 
-    if (!response.ok) throw new Error("Conversion failed");
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file.name.replace(/\.[^/.]+$/, "") + "." + type;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    URL.revokeObjectURL(url);
-    modalStatus.textContent = "Done!";
-    setTimeout(() => modal.classList.add("hidden"), 1000);
-  } catch (err) {
-    modalStatus.textContent = "Error: " + err.message;
-    setTimeout(() => modal.classList.add("hidden"), 2000);
-  }
+      modalStatus.textContent = "Done!";
+      setTimeout(() => modal.classList.add("hidden"), 1000);
+    } catch (err) {
+      modalStatus.textContent = "Conversion failed: " + err.message;
+      setTimeout(() => modal.classList.add("hidden"), 2000);
+    }
+  });
 });
