@@ -1,144 +1,130 @@
-// worker.js - Self-contained Worker for basic conversions
-
 export default {
   async fetch(request) {
-    if (request.method === 'OPTIONS') {
-      // CORS preflight
-      return new Response(null, {
-        status: 204,
+    if (request.method !== "POST") {
+      return new Response("Not allowed", { status: 405 });
+    }
+
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const target = formData.get("target");
+
+    if (!file || !target) {
+      return new Response("Missing file or target", { status: 400 });
+    }
+
+    const fileName = file.name.toLowerCase();
+
+    /* ===============================
+       TXT → PDF (simple text PDF)
+    =============================== */
+    if (fileName.endsWith(".txt") && target === "pdf") {
+      const text = await file.text();
+
+      const pdf = `
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]
+   /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >>
+>>
+endobj
+4 0 obj
+<< /Length ${text.length + 40} >>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(${text.replace(/\(/g, "\\(").replace(/\)/g, "\\)")}) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f
+0000000010 00000 n
+0000000060 00000 n
+0000000117 00000 n
+0000000295 00000 n
+0000000435 00000 n
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+520
+%%EOF
+`;
+
+      return new Response(pdf, {
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=converted.pdf",
         },
       });
     }
 
-    if (request.method !== 'POST') {
-      return new Response('Method Not Allowed', { status: 405 });
-    }
+    /* ===============================
+       PDF → TXT (basic text extract)
+       ⚠️ Limited but works for simple PDFs
+    =============================== */
+    if (fileName.endsWith(".pdf") && target === "txt") {
+      const buffer = await file.arrayBuffer();
+      const text = new TextDecoder().decode(buffer);
 
-    try {
-      const formData = await request.formData();
-      const file = formData.get('file');
-      const type = formData.get('type');
+      // naive text extraction
+      const matches = text.match(/\(([^)]+)\)/g) || [];
+      const extracted = matches
+        .map(m => m.slice(1, -1))
+        .join("\n");
 
-      if (!file || !type) {
-        return new Response('Missing file or type', { status: 400 });
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      let resultBuffer;
-      let contentType;
-      let filename = file.name;
-
-      switch (type) {
-        case 'txt-to-pdf':
-        case 'pdf':
-          resultBuffer = await convertTxtToPDF(arrayBuffer);
-          contentType = 'application/pdf';
-          filename = filename.replace(/\.[^/.]+$/, '.pdf');
-          break;
-
-        case 'txt-to-docx':
-        case 'docx':
-          resultBuffer = await convertTxtToDOCX(arrayBuffer);
-          contentType =
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-          filename = filename.replace(/\.[^/.]+$/, '.docx');
-          break;
-
-        case 'pdf-to-txt':
-        case 'txt':
-          resultBuffer = await convertPDFtoTXT(arrayBuffer);
-          contentType = 'text/plain';
-          filename = filename.replace(/\.[^/.]+$/, '.txt');
-          break;
-
-        default:
-          return new Response('Unsupported conversion type', { status: 400 });
-      }
-
-      return new Response(resultBuffer, {
+      return new Response(extracted || "No extractable text found.", {
         headers: {
-          'Content-Type': contentType,
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Access-Control-Allow-Origin': '*',
+          "Content-Type": "text/plain",
+          "Content-Disposition": "attachment; filename=converted.txt",
         },
       });
-    } catch (err) {
-      return new Response('Conversion failed: ' + err.message, { status: 500 });
     }
-  },
+
+    /* ===============================
+       CSV → TXT ✅ FIXED
+    =============================== */
+    if (fileName.endsWith(".csv") && target === "txt") {
+      const csvText = await file.text(); // 🔑 THIS IS THE FIX
+
+      // optional cleanup: normalize commas to tabs
+      const normalized = csvText.replace(/,/g, "\t");
+
+      return new Response(normalized, {
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Disposition": "attachment; filename=converted.txt",
+        },
+      });
+    }
+
+    /* ===============================
+       MD → TXT
+    =============================== */
+    if (fileName.endsWith(".md") && target === "txt") {
+      const md = await file.text();
+      const stripped = md
+        .replace(/[#>*_`]/g, "")
+        .replace(/\n{2,}/g, "\n");
+
+      return new Response(stripped, {
+        headers: {
+          "Content-Type": "text/plain",
+          "Content-Disposition": "attachment; filename=converted.txt",
+        },
+      });
+    }
+
+    return new Response("Unsupported conversion", { status: 400 });
+  }
 };
-
-// ----- Conversion functions -----
-
-async function convertTxtToPDF(arrayBuffer) {
-  const text = new TextDecoder().decode(arrayBuffer);
-
-  // Minimal PDF (text only)
-  const pdfLines = [
-    '%PDF-1.3',
-    '1 0 obj',
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    'endobj',
-    '2 0 obj',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    'endobj',
-    '3 0 obj',
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>`,
-    'endobj',
-    '4 0 obj',
-    `<< /Length ${text.length + 50} >>`,
-    'stream',
-    `BT /F1 24 Tf 50 700 Td (${text}) Tj ET`,
-    'endstream',
-    'endobj',
-    '5 0 obj',
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-    'endobj',
-    'xref',
-    '0 6',
-    '0000000000 65535 f ',
-    '0000000010 00000 n ',
-    '0000000060 00000 n ',
-    '0000000110 00000 n ',
-    '0000000200 00000 n ',
-    '0000000300 00000 n ',
-    'trailer',
-    '<< /Size 6 /Root 1 0 R >>',
-    'startxref',
-    '400',
-    '%%EOF',
-  ];
-
-  return new TextEncoder().encode(pdfLines.join('\n'));
-}
-
-async function convertTxtToDOCX(arrayBuffer) {
-  const text = new TextDecoder().decode(arrayBuffer);
-
-  const contentXml = `
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:p>
-      <w:r>
-        <w:t>${text}</w:t>
-      </w:r>
-    </w:p>
-  </w:body>
-</w:document>
-  `.trim();
-
-  return new TextEncoder().encode(contentXml);
-}
-
-async function convertPDFtoTXT(arrayBuffer) {
-  // Minimal PDF text extractor (will only work for very simple PDFs)
-  const pdfText = new TextDecoder().decode(arrayBuffer);
-  // Naively extract text inside parentheses
-  const matches = [...pdfText.matchAll(/\((.*?)\)/g)];
-  return new TextEncoder().encode(matches.map((m) => m[1]).join('\n'));
-}
